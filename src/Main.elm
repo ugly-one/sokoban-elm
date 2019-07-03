@@ -117,17 +117,9 @@ getRow : Model -> Int -> Html Msg
 getRow model number = 
   let 
     cells = List.map (\x -> {x=x,y=number}) (List.range 0 model.mMax.x)
-
-    orderedItems = List.map (\x -> toString x model) cells
-    -- walls = List.map (\x -> (x,"#")) (List.filter (\x -> x.y == number) model.mWalls)
-    -- creates = List.map (\x -> (x,"c")) (List.filter (\x -> x.y == number) model.mCrates)
-    -- storages = List.map (\x -> (x,"x")) (List.filter (\x -> x.y == number) model.mStorages)
-    -- worker = List.map (\x -> (x,"w")) (List.filter (\x -> x.y == number) [model.mWorker])
-    -- items = List.concat [walls, creates, storages, worker] 
-    -- orderedItems = List.map (\x -> Tuple.second x) (List.sortBy (\x -> (Tuple.first x).x) items )
-    orderedItemsHtml = List.map stringToTableCell orderedItems
-    result = tr[] orderedItemsHtml
-  in result
+    stringRepresentations = List.map (\x -> toString x model) cells
+    htmlRepresentations = List.map stringToTableCell stringRepresentations
+  in tr[] htmlRepresentations
 
 toString : Coord -> Model -> String
 toString coord model = 
