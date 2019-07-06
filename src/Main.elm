@@ -86,32 +86,78 @@ add coord input =
     Left -> {x = coord.x - 1, y = coord.y}
     Right -> {x = coord.x + 1, y = coord.y}
 
-init : Model
-init = { 
-  mWalls = [
-    {x=0,y=0}, {x=1,y=0}, {x=2,y=0}, {x=3,y=0}, {x=4,y=0},
-    {x=0,y=1}, {x=4,y=1},
-    {x=0,y=2}, {x=1,y=2}, {x=2,y=2}, {x=3,y=2}, {x=4,y=2}], 
-  mCrates = [{x=2,y=1}], 
-  mStorages = [{x=3,y=1}], 
-  mWorker = {x=1,y=1}, 
-  mMax = {x=4,y=2},
+firstLevel : List String
+firstLevel = [
+  "    #####          ",
+  "    #   #          ",
+  "    #o  #          ",
+  "  ###  o##         ",
+  "  #  o o #         ",
+  "### # ## #   ######",
+  "#   # ## #####  ..#",
+  "# o  o          ..#",
+  "##### ### #@##  ..#",
+  "    #     #########",
+  "    #######        "
+  ]
+
+emptyWorld : Model
+emptyWorld = {
+  mWalls = [],
+  mCrates = [],
+  mStorages = [],
+  mWorker = {x=0,y=0},
+  mMax = {x=0,y=0},
   mSteps = 0
   }
+
+updateWorld : Model -> (Coord, Char) -> Model
+updateWorld world (coord, c) =
+    case c of   '#' -> {world | mWalls = [coord] ++ world.mWalls}
+                '@' -> {world | mWorker = coord}
+                'o' -> {world | mCrates = [coord] ++ world.mCrates}
+                '.' -> {world | mStorages = [coord] ++ world.mStorages}
+                _ -> world
+
+generateCoordinates : Int -> Int -> List Coord
+generateCoordinates a b = 
+  List.concat (List.map (\q -> List.map (\w -> {x=w,y=q}) (List.range 0 a)) (List.range 0 b))
+
+parseLevel : List String -> Model
+parseLevel input = 
+    let
+      a = List.head input
+      t = case a of
+            Just x -> x
+            Nothing -> ""
+      width = List.length (String.toList t)
+      height = List.length input
+      coordinates = generateCoordinates (width-1) (height-1)
+      maybeLastCoordinate = List.head ( List.reverse coordinates)
+      lastCoordinate = case maybeLastCoordinate of 
+                        Just x -> x
+                        Nothing -> {x=0,y=0} -- TODO return empty model
+      inputCharList = List.map String.toList input
+      flatInput = List.concat inputCharList
+      elements = List.map2 (\char coord -> (coord,char)) flatInput coordinates
+      world = List.foldl (\x y -> updateWorld y x) emptyWorld elements
+    in {world | mMax = lastCoordinate}
+
+init : Model
+init = parseLevel firstLevel
 
 view : Model -> Html Msg
 view model =
   div []
-    [ table [ ] [ 
-        getRow model 0,
-        getRow model 1,
-        getRow model 2
-    ]
+    [ table [ ] (getRows model)
     , button [ onClick Up ] [ text "up" ]
     , button [ onClick Down ] [ text "down" ]
     , button [ onClick Left ] [ text "left" ]
     , button [ onClick Right ] [ text "right" ]
     ]
+
+getRows : Model -> List (Html Msg)
+getRows model = List.map (\i -> getRow model i) (List.range 0 model.mMax.y)
 
 getRow : Model -> Int -> Html Msg
 getRow model number = 
@@ -123,10 +169,12 @@ getRow model number =
 
 toString : Coord -> Model -> String
 toString coord model = 
+  -- order matters here. If the worker is on a storage - show worker
+  -- so the check if given coordinate is worker has to be done earlier
   if isCrate model coord then "c"
+  else if isWorker model coord then "w"
   else if isStorage model coord then "s"
   else if isWall model coord then "#"
-  else if isWorker model coord then "w"
   else " "
 
 stringToTableCell : String -> Html Msg
