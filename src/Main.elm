@@ -1,6 +1,7 @@
 import Browser
-import Html exposing (Html, button, div, text, table, tr, td)
+import Html exposing (Html, button, div, img, text, table, tr, td)
 import Html.Events exposing (onClick)
+import Html.Attributes exposing (style, src)
 
 main =
   Browser.sandbox { init = init, update = update, view = view }
@@ -69,7 +70,8 @@ isCrate : Model -> Coord -> Bool
 isCrate model coord = List.member coord model.mCrates
 
 isFinished : Model -> Bool
-isFinished model = (List.sortWith compareCoords model.mCrates) == (List.sortWith compareCoords model.mStorages)
+isFinished model = 
+  (List.sortWith compareCoords model.mCrates) == (List.sortWith compareCoords model.mStorages)
 
 compareCoords : Coord -> Coord -> Order
 compareCoords c1 c2 =
@@ -149,7 +151,8 @@ init = parseLevel firstLevel
 view : Model -> Html Msg
 view model =
   div []
-    [ table [ ] (getRows model)
+    [
+      table [ ] (getRows model)
     , button [ onClick Up ] [ text "up" ]
     , button [ onClick Down ] [ text "down" ]
     , button [ onClick Left ] [ text "left" ]
@@ -163,19 +166,23 @@ getRow : Model -> Int -> Html Msg
 getRow model number = 
   let 
     cells = List.map (\x -> {x=x,y=number}) (List.range 0 model.mMax.x)
-    stringRepresentations = List.map (\x -> toString x model) cells
-    htmlRepresentations = List.map stringToTableCell stringRepresentations
+    imagePaths = List.map (\x -> toImagePath x model) cells
+    htmlRepresentations = List.map imagePathToTableCell imagePaths
   in tr[] htmlRepresentations
 
-toString : Coord -> Model -> String
-toString coord model = 
+toImagePath : Coord -> Model -> String
+toImagePath coord model = 
   -- order matters here. If the worker is on a storage - show worker
-  -- so the check if given coordinate is worker has to be done earlier
-  if isCrate model coord then "c"
-  else if isWorker model coord then "w"
-  else if isStorage model coord then "s"
-  else if isWall model coord then "#"
-  else " "
+  -- so the check if given coordinate is a worker has to be done earlier
+  if isCrate model coord && isStorage model coord then "\\images\\crateStorage.png"
+  else if isCrate model coord then "\\images\\crate.png"
+  else if isWorker model coord then "\\images\\penguin.png"
+  else if isStorage model coord then "\\images\\dot.png"
+  else if isWall model coord then "\\images\\wall.png"
+  else "\\images\\empty.png"
 
-stringToTableCell : String -> Html Msg
-stringToTableCell s = td [] [text s]
+imagePathToTableCell : String -> Html Msg
+imagePathToTableCell path = td [] [ img [ 
+        style "width" "30px",
+        style "height" "30px",
+        src path ] []]
