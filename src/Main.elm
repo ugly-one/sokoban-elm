@@ -1,12 +1,25 @@
 import Browser
+import Json.Decode as Decode
 import Html exposing (Html, button, div, img, text, table, tr, td)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style, src)
+import Browser.Events exposing (onKeyDown)
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.element 
+    { init = init
+    , view = view
+    , update = update 
+    , subscriptions = subscriptions 
+    }
 
-type Msg = Left | Right | Up | Down
+type Msg
+  = Left
+  | Right
+  | Down
+  | Up
+  | Other
+
 
 type alias Coord = { x : Int, y : Int  }
 
@@ -19,11 +32,51 @@ type alias Model = {
   mSteps : Int
   } 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model = 
   if isValid msg model then 
-    modifyWorldNoValidation model msg
-  else model    
+    (modifyWorldNoValidation model msg, Cmd.none)
+  else (model, Cmd.none)    
+
+init : () -> (Model, Cmd Msg)
+init _ = (parseLevel firstLevel, Cmd.none)
+
+view : Model -> Html Msg
+view model =
+  div []
+    [
+      table [ ] (getRows model)
+    ]
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.batch
+    [ onKeyDown keyDecoder
+  ] 
+
+
+
+keyDecoder : Decode.Decoder Msg
+keyDecoder =
+  Decode.map toDirection (Decode.field "key" Decode.string)
+
+toDirection : String -> Msg
+toDirection string =
+  case string of
+    "ArrowLeft" ->
+      Left
+
+    "ArrowRight" ->
+      Right
+
+    "ArrowUp" ->
+      Up
+
+    "ArrowDown" ->
+      Down
+
+    _ ->
+      Other
 
 -- can be called only with valid input --
 modifyWorldNoValidation : Model -> Msg -> Model
@@ -87,6 +140,7 @@ add coord input =
     Down -> {x = coord.x, y = coord.y+1}
     Left -> {x = coord.x - 1, y = coord.y}
     Right -> {x = coord.x + 1, y = coord.y}
+    Other -> coord
 
 firstLevel : List String
 firstLevel = [
@@ -145,19 +199,7 @@ parseLevel input =
       world = List.foldl (\x y -> updateWorld y x) emptyWorld elements
     in {world | mMax = lastCoordinate}
 
-init : Model
-init = parseLevel firstLevel
 
-view : Model -> Html Msg
-view model =
-  div []
-    [
-      table [ ] (getRows model)
-    , button [ onClick Up ] [ text "up" ]
-    , button [ onClick Down ] [ text "down" ]
-    , button [ onClick Left ] [ text "left" ]
-    , button [ onClick Right ] [ text "right" ]
-    ]
 
 getRows : Model -> List (Html Msg)
 getRows model = List.map (\i -> getRow model i) (List.range 0 model.mMax.y)
